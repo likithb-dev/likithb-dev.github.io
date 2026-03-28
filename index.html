@@ -783,7 +783,9 @@
   });
 
   // ── Boot after fonts load ──────────────────────────────────────
-  document.fonts.ready.then(() => {
+  const fontPromise = document.fonts.load('800 200px Syne');
+  const timeoutPromise = new Promise(res => setTimeout(res, 2500));
+  Promise.race([fontPromise, timeoutPromise]).then(() => {
     init();
     animate();
     window.addEventListener('resize', init);
