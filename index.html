@@ -783,9 +783,42 @@
   });
 
   // ── Boot after fonts load ──────────────────────────────────────
-  const fontPromise = document.fonts.load('800 200px Syne');
-  const timeoutPromise = new Promise(res => setTimeout(res, 2500));
-  Promise.race([fontPromise, timeoutPromise]).then(() => {
+  function tryInit(attempts) {
+    // Render a test char and check if any pixels appeared
+    const test = document.createElement('canvas');
+    test.width = 300; test.height = 120;
+    const tc = test.getContext('2d');
+    const fs = 80;
+    tc.font = '800 ' + fs + 'px Syne, sans-serif';
+    tc.fillStyle = '#fff';
+    tc.textAlign = 'center';
+    tc.textBaseline = 'middle';
+    tc.fillText('L', 150, 60);
+    const data = tc.getImageData(0,0,300,120).data;
+    let hasPixels = false;
+    for (let i=3; i<data.length; i+=4) { if (data[i]>128){ hasPixels=true; break; } }
+
+    if (hasPixels || attempts <= 0) {
+      init();
+      animate();
+      window.addEventListener('resize', init);
+      setTimeout(() => {
+        gsap.to('.hero-label', { opacity: 1, y: 0, duration: 1,   ease: 'power2.out' });
+        gsap.to('.hero-sub',   { opacity: 1, y: 0, duration: 1,   delay: 0.28, ease: 'power2.out' });
+        gsap.to('.hero-cta',   { opacity: 1,       duration: 0.9, delay: 0.55 });
+        gsap.to('.scroll-hint',{ opacity: 1,       duration: 0.9, delay: 1.1  });
+      }, 300);
+    } else {
+      // Font not ready yet — retry in 200ms
+      setTimeout(() => tryInit(attempts - 1), 200);
+    }
+  }
+
+  // Kick off after a small head-start, retrying up to 20 times (4 seconds total)
+  document.fonts.load('800 100px Syne').then(() => tryInit(20)).catch(() => tryInit(20));
+
+  // Dummy block to close — replaced below
+  if (false) {
     init();
     animate();
     window.addEventListener('resize', init);
@@ -796,8 +829,8 @@
       gsap.to('.hero-sub',   { opacity: 1, y: 0, duration: 1,   delay: 0.28, ease: 'power2.out' });
       gsap.to('.hero-cta',   { opacity: 1,       duration: 0.9, delay: 0.55 });
       gsap.to('.scroll-hint',{ opacity: 1,       duration: 0.9, delay: 1.1  });
-    }, 750);
-  });
+    // (entrance handled inside tryInit)
+  } // end dummy
 
   // ═══════════════════════════════════════════════════════════════
   // 3. GSAP SCROLL REVEALS
